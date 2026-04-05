@@ -51,9 +51,6 @@ def collect_classes(dataset_path):
     fruit_dirs = [d for d in Path(dataset_path).iterdir() if d.is_dir()]  # apple_images, mango_images
 
     for fruit_dir in fruit_dirs:
-        # Derive fruit name from folder: "apple_images" -> "apple", "mango_images" -> "mango"
-        fruit_name = fruit_dir.name.replace("_images", "")
-
         image_type_dirs = [d for d in fruit_dir.iterdir() if d.is_dir()]  # real / synthetic
 
         for image_type_dir in image_type_dirs:
@@ -62,7 +59,7 @@ def collect_classes(dataset_path):
             for defect_dir in defect_dirs:
                 # Normalise typo: "rot_deffect" -> "rot_defect"
                 defect_name = defect_dir.name.replace("deffect", "defect")
-                class_name = f"{fruit_name}_{defect_name}"
+                class_name = defect_name
 
                 images = [
                     str(f) for f in defect_dir.iterdir()
