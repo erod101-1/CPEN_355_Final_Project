@@ -8,6 +8,7 @@ from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 from PIL import Image
 import numpy as np
+from tqdm import tqdm
 
 # Configuration
 IMAGE_SIZE = 224
@@ -108,25 +109,28 @@ def split_and_organize_dataset(dataset_path, output_path):
     print("\nCreating output directory structure...")
     create_split_directories(output_path, class_images.keys())
 
-    for class_name, images in sorted(class_images.items()):
-        train_imgs, temp_imgs = train_test_split(
-            images,
-            test_size=(VAL_RATIO + TEST_RATIO),
-            random_state=RANDOM_SEED,
-        )
-        val_imgs, test_imgs = train_test_split(
-            temp_imgs,
-            test_size=TEST_RATIO / (VAL_RATIO + TEST_RATIO),
-            random_state=RANDOM_SEED,
-        )
+    total_images = sum(len(imgs) for imgs in class_images.values())
+    with tqdm(total=total_images, desc="Processing images", unit="img") as pbar:
+        for class_name, images in sorted(class_images.items()):
+            train_imgs, temp_imgs = train_test_split(
+                images,
+                test_size=(VAL_RATIO + TEST_RATIO),
+                random_state=RANDOM_SEED,
+            )
+            val_imgs, test_imgs = train_test_split(
+                temp_imgs,
+                test_size=TEST_RATIO / (VAL_RATIO + TEST_RATIO),
+                random_state=RANDOM_SEED,
+            )
 
-        print(f"\nProcessing '{class_name}' — train: {len(train_imgs)}, val: {len(val_imgs)}, test: {len(test_imgs)}")
+            pbar.set_postfix({"class": class_name})
 
-        for split, split_imgs in (("train", train_imgs), ("val", val_imgs), ("test", test_imgs)):
-            for src in split_imgs:
-                filename = os.path.basename(src)
-                dst = os.path.join(output_path, split, class_name, filename)
-                _copy_and_resize(src, dst)
+            for split, split_imgs in (("train", train_imgs), ("val", val_imgs), ("test", test_imgs)):
+                for src in split_imgs:
+                    filename = os.path.basename(src)
+                    dst = os.path.join(output_path, split, class_name, filename)
+                    _copy_and_resize(src, dst)
+                    pbar.update(1)
 
 
 def get_data_transforms():

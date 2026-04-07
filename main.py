@@ -7,16 +7,16 @@ from CNN import CNNModel, train_cnn, test_cnn
 from DNN import DNNModel, train_dnn, test_dnn
 
 # --- Flags ---
-PREP_DATASET = True   # Set to False to skip download/preparation and use existing data
-TRAIN_CNN    = True   # Set to False to skip CNN training (loads cnn_model.pth instead)
+PREP_DATASET = False   # Set to False to skip download/preparation and use existing data
+TRAIN_CNN    = False   # Set to False to skip CNN training (loads cnn_model.pth instead)
 TRAIN_DNN    = True   # Set to False to skip DNN training (loads dnn_model.pth instead)
-TEST_CNN     = True   # Set to False to skip CNN evaluation
+TEST_CNN     = False   # Set to False to skip CNN evaluation
 TEST_DNN     = True   # Set to False to skip DNN evaluation
 
 # --- Hyperparameters ---
 DEVICE        = "cuda" if torch.cuda.is_available() else "cpu"
-NUM_EPOCHS    = 10
-LEARNING_RATE = 1e-3
+NUM_EPOCHS    = 30
+LEARNING_RATE = 5e-4
 PREPARED_DATASET_DIR = "prepared_dataset"
 
 
@@ -75,5 +75,5 @@ if __name__ == "__main__":
         if not TRAIN_DNN:
             dnn_model = DNNModel(num_classes=num_classes).to(DEVICE)
             dnn_model.load_state_dict(torch.load("dnn_model.pth", map_location=DEVICE))
-        dnn_results = test_dnn(dnn_model, test_loader, device=DEVICE)
-        print("DNN results:", dnn_results)
+        dnn_results = test_dnn(dnn_model, test_loader, device=DEVICE, class_names=classes)
+        print("DNN results:", {k: v for k, v in dnn_results.items() if k != "classification_report"})
