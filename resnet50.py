@@ -3,6 +3,7 @@ import time
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torchvision import models
 from tqdm import tqdm
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
@@ -11,48 +12,28 @@ import seaborn as sns
 from visualize import show_sample_predictions
 
 
-class DNNModel(nn.Module):
-    def __init__(self, num_classes: int, input_size: int = 224 * 224 * 3):
+class ResNet50Model(nn.Module):
+    def __init__(self, num_classes: int, pretrained: bool = True):
         super().__init__()
-        self.flatten = nn.Flatten()
-        self.network = nn.Sequential(
-            nn.Linear(input_size, 1024),
-            nn.BatchNorm1d(1024),
-            nn.GELU(),
-            nn.Dropout(0.5),
-
-            nn.Linear(1024, 512),
-            nn.BatchNorm1d(512),
-            nn.GELU(),
-            nn.Dropout(0.4),
-
-            nn.Linear(512, 256),
-            nn.BatchNorm1d(256),
-            nn.GELU(),
-            nn.Dropout(0.3),
-
-            nn.Linear(256, 128),
-            nn.BatchNorm1d(128),
-            nn.GELU(),
-            nn.Dropout(0.2),
-
-            nn.Linear(128, num_classes),
-        )
+        weights = models.ResNet50_Weights.DEFAULT if pretrained else None
+        self.model = models.resnet50(weights=weights)
+        # Replace the final fully-connected layer to match num_classes
+        in_features = self.model.fc.in_features
+        self.model.fc = nn.Linear(in_features, num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.flatten(x)
-        return self.network(x)
+        return self.model(x)
 
 
-def train_dnn(
-    model: DNNModel,
+def train_resnet50(
+    model: ResNet50Model,
     train_loader: DataLoader,
     val_loader: DataLoader,
     num_epochs: int = 10,
     learning_rate: float = 1e-3,
     device: str = "cpu",
-) -> DNNModel:
-    """Train the DNN model and return the trained model.
+) -> ResNet50Model:
+    """Train the ResNet50 model and return the trained model.
 
     Use val_loader each epoch to monitor overfitting and save the best checkpoint.
     Do NOT use test_loader here — it is reserved for final evaluation only.
@@ -124,20 +105,20 @@ def train_dnn(
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_weights = copy.deepcopy(model.state_dict())
-            print(f"  -> New best model (val_loss={val_loss:.4f})")
+            print(f"  -> New best ResNet50 model (val_loss={val_loss:.4f})")
 
     model.load_state_dict(best_weights)
     return model
 
 
-def test_dnn(
-    model: DNNModel,
+def test_resnet50(
+    model: ResNet50Model,
     test_loader: DataLoader,
     device: str = "cpu",
     class_names: list = None,
     show_grid: bool = True,
 ) -> dict:
-    """Evaluate the DNN on the test set. Returns a dict with accuracy, loss,
+    """Evaluate ResNet50 on the test set. Returns a dict with accuracy, loss,
     per-class precision/recall/F1, and saves a confusion matrix plot.
 
     Call this once after training is complete. Use val_loader during training instead.
@@ -153,7 +134,7 @@ def test_dnn(
 
     inference_start = time.time()
     with torch.no_grad():
-        for images, labels in tqdm(test_loader, desc="Testing DNN", unit="batch"):
+        for images, labels in tqdm(test_loader, desc="Testing ResNet50", unit="batch"):
             images, labels = images.to(device), labels.to(device)
             outputs = model(images)
             loss = criterion(outputs, labels)
@@ -167,14 +148,14 @@ def test_dnn(
             all_labels.extend(labels.cpu().numpy())
     inference_time = time.time() - inference_start
 
-    all_preds = np.array(all_preds)
+    all_preds  = np.array(all_preds)
     all_labels = np.array(all_labels)
 
-    # Classification report (precision, recall, F1 per class)
+    # Classification report
     target_names = class_names if class_names else [str(i) for i in range(len(set(all_labels)))]
     report = classification_report(all_labels, all_preds, target_names=target_names)
     report_dict = classification_report(all_labels, all_preds, target_names=target_names, output_dict=True)
-    print(f"\n--- DNN Classification Report ---")
+    print(f"\n--- ResNet50 Classification Report ---")
     print(f"Inference time: {inference_time:.2f}s total | {inference_time / total * 1000:.3f}ms per image")
     print(report)
 
@@ -185,15 +166,15 @@ def test_dnn(
                 xticklabels=target_names, yticklabels=target_names, ax=ax)
     ax.set_xlabel("Predicted")
     ax.set_ylabel("True")
-    ax.set_title("DNN Confusion Matrix")
+    ax.set_title("ResNet50 Confusion Matrix")
     plt.tight_layout()
-    plt.savefig("models/dnn_confusion_matrix.png", dpi=150)
+    plt.savefig("models/resnet50_confusion_matrix.png", dpi=150)
     plt.close()
-    print("Confusion matrix saved to models/dnn_confusion_matrix.png")
+    print("Confusion matrix saved to models/resnet50_confusion_matrix.png")
 
     # Sample image grid
     if show_grid:
-        show_sample_predictions(model, test_loader, target_names, device=device, model_name="DNN")
+        show_sample_predictions(model, test_loader, target_names, device=device, model_name="ResNet50")
 
     return {
         "accuracy": correct / total,

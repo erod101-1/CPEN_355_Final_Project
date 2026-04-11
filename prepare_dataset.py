@@ -124,7 +124,11 @@ def split_and_organize_dataset(dataset_path, output_path):
 
         for split, split_imgs in (("train", train_imgs), ("val", val_imgs), ("test", test_imgs)):
             for src in split_imgs:
-                filename = os.path.basename(src)
+                # Prefix with the image-type directory (e.g. apple_real_images,
+                # apple_synthethic_images) to avoid collisions between real and
+                # synthetic images that share the same filename
+                prefix = Path(src).parent.parent.name
+                filename = f"{prefix}__{os.path.basename(src)}"
                 dst = os.path.join(output_path, split, class_name, filename)
                 _copy_and_resize(src, dst)
 

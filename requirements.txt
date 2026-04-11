@@ -1,7 +1,10 @@
 kagglehub
+matplotlib
 torch
 torchvision
 numpy
 Pillow
 scikit-learn
 scipy
+seaborn
+tqdm
